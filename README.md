@@ -25,7 +25,8 @@ Given two usernames, the script:
 - Finds the groups User1 has that User2 does **not** already have
 - Adds those groups to User2
 - Reports which groups were added / skipped
-- Writes a log file (`Add-GroupLog.csv`) with timestamps of every added/skipped/failed action
+- Writes a log file (`Add-GroupLog.csv`) with timestamps of every added/failed action
+- Writes skipped (already-a-member) groups to a separate `Skipped-GroupLog.csv`
 - Supports `-WhatIf` to preview without making changes
 
 ## Requirements
@@ -89,14 +90,22 @@ The result CSV (default `Compare-Groups.csv`) has these columns:
 | `CsvFile` | CSV file containing the two users                                   | `users.csv` |
 | `WhatIf`  | Preview the additions without making changes                        | off        |
 | `LogFile` | Path to the Add-GroupLog.csv log file                               | `Add-GroupLog.csv` in the script directory |
+| `SkippedLogFile` | Path to the skipped-groups log file                          | `Skipped-GroupLog.csv` in the script directory |
 
-### Add log file (Add only)
+### Add log files (Add only)
 
-Each run appends one row per action to `Add-GroupLog.csv`:
+Each run appends one row per action.
 
-| Timestamp           | SourceUser | TargetUser | Group  | Status  | Details            |
+`Add-GroupLog.csv` — groups that were added or failed:
+
+| Timestamp           | SourceUser | TargetUser | Group  | Status | Details            |
 |---------------------|------------|------------|--------|---------|--------------------|
 | 2024-01-01 10:00:00 | jdoe       | jsmith     | Finance | Added   |                    |
-| 2024-01-01 10:00:00 | jdoe       | jsmith     | HR      | Skipped | Already a member   |
 | 2024-01-01 10:00:00 | jdoe       | jsmith     | IT      | Failed  | <error message>    |
+
+`Skipped-GroupLog.csv` — groups the target already belonged to:
+
+| Timestamp           | SourceUser | TargetUser | Group | Status  | Details          |
+|---------------------|------------|------------|-------|---------|------------------|
+| 2024-01-01 10:00:00 | jdoe       | jsmith     | HR    | Skipped | Already a member |
 

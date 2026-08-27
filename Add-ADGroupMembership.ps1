@@ -17,8 +17,11 @@ Path to a CSV file containing the usernames. Defaults to users.csv in the script
 .PARAMETER WhatIf
 Show what would be added without making changes.
 .PARAMETER LogFile
-Path to the log file. Defaults to Add-GroupLog.csv in the script directory. Appends
-each added/skipped/failed group with a timestamp.
+Path to the log file for added/failed groups. Defaults to Add-GroupLog.csv in the
+script directory. Appends each added/skipped/failed group with a timestamp.
+.PARAMETER SkippedLogFile
+Path to the log file for groups the target already belongs to. Defaults to
+Skipped-GroupLog.csv in the script directory.
 
 .EXAMPLE
 .\Add-ADGroupMembership.ps1 -User1 jdoe -User2 jsmith
@@ -34,7 +37,8 @@ param(
     [string]$User2,
     [string]$CsvFile,
     [switch]$WhatIf,
-    [string]$LogFile
+    [string]$LogFile,
+    [string]$SkippedLogFile
 )
 
 # Robustly resolve the script's directory.
@@ -48,6 +52,7 @@ function Get-ScriptDirectory {
 # Default
 if (-not $CsvFile) { $CsvFile = Join-Path (Get-ScriptDirectory) "users.csv" }
 if (-not $LogFile) { $LogFile = Join-Path (Get-ScriptDirectory) "Add-GroupLog.csv" }
+if (-not $SkippedLogFile) { $SkippedLogFile = Join-Path (Get-ScriptDirectory) "Skipped-GroupLog.csv" }
 
 # If users not given directly, read from the CSV file
 if (-not $User1 -or -not $User2) {
@@ -111,7 +116,7 @@ foreach ($group in $groupsToAdd) {
     $entry | Export-Csv -Path $LogFile -Append -NoTypeInformation
 }
 
-# Log any groups the target already had (skipped)
+# Log any groups the target already had (skipped) to their own file
 foreach ($group in ($sourceGroups | Where-Object { $targetGroups -contains $_ })) {
     [PSCustomObject]@{
         Timestamp  = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -120,8 +125,9 @@ foreach ($group in ($sourceGroups | Where-Object { $targetGroups -contains $_ })
         Group      = $group
         Status     = "Skipped"
         Details    = "Already a member"
-    } | Export-Csv -Path $LogFile -Append -NoTypeInformation
+    } | Export-Csv -Path $SkippedLogFile -Append -NoTypeInformation
 }
 
 Write-Host "`nDone. Added $addedCount of $($groupsToAdd.Count) groups to $User2." -ForegroundColor Cyan
-Write-Host "Log written to: $LogFile" -ForegroundColor Cyan
+Write-Host "Add log written to: $LogFile" -ForegroundColor Cyan
+Write-Host "Skipped log written to: $SkippedLogFile" -ForegroundColor Cyan
