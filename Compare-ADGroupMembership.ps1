@@ -29,9 +29,22 @@ Requires the ActiveDirectory PowerShell module.
 param(
     [string]$User1,
     [string]$User2,
-    [string]$CsvFile = "$PSScriptRoot\users.csv",
-    [string]$OutputPath = "$PWD\Compare-Groups.csv"
+    [string]$CsvFile,
+    [string]$OutputPath
 )
+
+# Robustly resolve the script's directory. $PSScriptRoot is empty when the script
+# is run interactively or invoked in some module/dot-sourcing contexts.
+function Get-ScriptDirectory {
+    if ($PSScriptRoot) { return $PSScriptRoot }
+    $path = $MyInvocation.MyCommand.Path
+    if ($path) { return (Split-Path -Parent $path) }
+    return (Get-Location).Path
+}
+
+# Defaults (resolved here so pathing is robust)
+if (-not $CsvFile)    { $CsvFile = Join-Path (Get-ScriptDirectory) "users.csv" }
+if (-not $OutputPath) { $OutputPath = Join-Path (Get-Location) "Compare-Groups.csv" }
 
 # If users not given directly, read from the CSV file
 if (-not $User1 -or -not $User2) {
