@@ -61,9 +61,16 @@ if (-not $User1 -or -not $User2) {
     $User2 = $users[0].User2
 }
 
-# Get groups for each user
-$groups1 = Get-ADPrincipalGroupMembership -Identity $User1 | Select-Object -ExpandProperty Name
-$groups2 = Get-ADPrincipalGroupMembership -Identity $User2 | Select-Object -ExpandProperty Name
+# Get all direct groups for each user. Get-ADPrincipalGroupMembership is unreliable
+# (often returns only the primary group), so use the memberOf attribute instead.
+$groups1 = @(Get-ADUser -Identity $User1 -Properties memberOf).memberOf |
+    ForEach-Object { (Get-ADGroup -Identity $_ -ErrorAction SilentlyContinue).Name }
+$groups2 = @(Get-ADUser -Identity $User2 -Properties memberOf).memberOf |
+    ForEach-Object { (Get-ADGroup -Identity $_ -ErrorAction SilentlyContinue).Name }
+
+# Remove any empty names
+$groups1 = $groups1 | Where-Object { $_ }
+$groups2 = $groups2 | Where-Object { $_ }
 
 # Compute differences (case-insensitive)
 $onlyIn1 = $groups1 | Where-Object { $groups2 -notcontains $_ }
