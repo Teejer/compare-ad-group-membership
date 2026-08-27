@@ -44,7 +44,7 @@ function Get-ScriptDirectory {
 
 # Defaults (resolved here so pathing is robust)
 if (-not $CsvFile)    { $CsvFile = Join-Path (Get-ScriptDirectory) "users.csv" }
-if (-not $OutputPath) { $OutputPath = Join-Path (Get-Location) "Compare-Groups.csv" }
+if (-not $OutputPath) { $OutputPath = Join-Path (Get-ScriptDirectory) "Compare-Groups.csv" }
 
 # If users not given directly, read from the CSV file
 if (-not $User1 -or -not $User2) {

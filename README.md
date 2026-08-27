@@ -54,4 +54,4 @@ The result CSV (default `Compare-Groups.csv`) has these columns:
 | `User1`    | First username (samAccountName)                                    | -                     |
 | `User2`    | Second username (samAccountName)                                   | -                     |
 | `CsvFile`  | CSV file containing the two users                                  | `users.csv`           |
-| `OutputPath` | Path for the result CSV                                           | `Compare-Groups.csv`  |
+| `OutputPath` | Path for the result CSV                                           | `Compare-Groups.csv` in the script directory |
