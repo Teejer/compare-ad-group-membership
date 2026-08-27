@@ -7,18 +7,18 @@ Reads two usernames either directly from parameters or from a CSV file (default:
 next to the script). Compares group membership of User1 and User2, then adds the groups
 that only User1 has onto User2. Groups User2 already has are skipped.
 
-.PARAMETER SourceUser
-The user whose groups will be copied FROM. (samAccountName)
-.PARAMETER TargetUser
-The user that will receive the groups. (samAccountName)
+.PARAMETER User1
+The user whose groups will be copied FROM (source). (samAccountName)
+.PARAMETER User2
+The user that will receive the groups (target). (samAccountName)
 .PARAMETER CsvFile
 Path to a CSV file containing the usernames. Defaults to users.csv in the script directory.
-    Columns: SourceUser,TargetUser
+    Columns: User1,User2
 .PARAMETER WhatIf
 Show what would be added without making changes.
 
 .EXAMPLE
-.\Add-ADGroupMembership.ps1 -SourceUser jdoe -TargetUser jsmith
+.\Add-ADGroupMembership.ps1 -User1 jdoe -User2 jsmith
 
 .EXAMPLE
 .\Add-ADGroupMembership.ps1 -WhatIf
@@ -27,8 +27,8 @@ Show what would be added without making changes.
 Requires the ActiveDirectory PowerShell module.
 #>
 param(
-    [string]$SourceUser,
-    [string]$TargetUser,
+    [string]$User1,
+    [string]$User2,
     [string]$CsvFile,
     [switch]$WhatIf
 )
@@ -45,38 +45,38 @@ function Get-ScriptDirectory {
 if (-not $CsvFile) { $CsvFile = Join-Path (Get-ScriptDirectory) "users.csv" }
 
 # If users not given directly, read from the CSV file
-if (-not $SourceUser -or -not $TargetUser) {
+if (-not $User1 -or -not $User2) {
     if (-not (Test-Path $CsvFile)) {
         Write-Error "CSV file not found: $CsvFile"
         return
     }
     $users = Import-Csv -Path $CsvFile
-    if (-not $users -or -not $users[0].SourceUser -or -not $users[0].TargetUser) {
-        Write-Error "CSV must have a header row with columns 'SourceUser' and 'TargetUser' and at least one data row."
+    if (-not $users -or -not $users[0].User1 -or -not $users[0].User2) {
+        Write-Error "CSV must have a header row with columns 'User1' and 'User2' and at least one data row."
         return
     }
-    $SourceUser = $users[0].SourceUser
-    $TargetUser = $users[0].TargetUser
+    $User1 = $users[0].User1
+    $User2 = $users[0].User2
 }
 
 # Get all direct groups for each user via the memberOf attribute
-$sourceGroups = @(Get-ADUser -Identity $SourceUser -Properties memberOf).memberOf |
+$sourceGroups = @(Get-ADUser -Identity $User1 -Properties memberOf).memberOf |
     ForEach-Object { (Get-ADGroup -Identity $_ -ErrorAction SilentlyContinue).Name } |
     Where-Object { $_ }
 
-$targetGroups = @(Get-ADUser -Identity $TargetUser -Properties memberOf).memberOf |
+$targetGroups = @(Get-ADUser -Identity $User2 -Properties memberOf).memberOf |
     ForEach-Object { (Get-ADGroup -Identity $_ -ErrorAction SilentlyContinue).Name } |
     Where-Object { $_ }
 
 # Groups to add: in source but not already in target
 $groupsToAdd = $sourceGroups | Where-Object { $targetGroups -notcontains $_ }
 
-Write-Host "Source ($SourceUser) groups: $($sourceGroups.Count)" -ForegroundColor Cyan
-Write-Host "Target ($TargetUser) groups: $($targetGroups.Count)" -ForegroundColor Cyan
+Write-Host "Source ($User1) groups: $($sourceGroups.Count)" -ForegroundColor Cyan
+Write-Host "Target ($User2) groups: $($targetGroups.Count)" -ForegroundColor Cyan
 Write-Host "Groups to add: $($groupsToAdd.Count)" -ForegroundColor Yellow
 
 if ($WhatIf) {
-    Write-Host "`n=== [WhatIf] Would add to $TargetUser ===" -ForegroundColor Yellow
+    Write-Host "`n=== [WhatIf] Would add to $User2 ===" -ForegroundColor Yellow
     $groupsToAdd | ForEach-Object { Write-Host "  $_" }
     return
 }
@@ -85,13 +85,13 @@ if ($WhatIf) {
 $addedCount = 0
 foreach ($group in $groupsToAdd) {
     try {
-        Add-ADGroupMember -Identity $group -Members $TargetUser -ErrorAction Stop
-        Write-Host "  Added $TargetUser to: $group" -ForegroundColor Green
+        Add-ADGroupMember -Identity $group -Members $User2 -ErrorAction Stop
+        Write-Host "  Added $User2 to: $group" -ForegroundColor Green
         $addedCount++
     }
     catch {
-        Write-Warning "  Failed to add $TargetUser to $group : $($_.Exception.Message)"
+        Write-Warning "  Failed to add $User2 to $group : $($_.Exception.Message)"
     }
 }
 
-Write-Host "`nDone. Added $addedCount of $($groupsToAdd.Count) groups to $TargetUser." -ForegroundColor Cyan
+Write-Host "`nDone. Added $addedCount of $($groupsToAdd.Count) groups to $User2." -ForegroundColor Cyan
