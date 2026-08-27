@@ -16,6 +16,9 @@ Path to a CSV file containing the usernames. Defaults to users.csv in the script
     Columns: User1,User2
 .PARAMETER WhatIf
 Show what would be added without making changes.
+.PARAMETER LogFile
+Path to the log file. Defaults to Add-GroupLog.csv in the script directory. Appends
+each added/skipped/failed group with a timestamp.
 
 .EXAMPLE
 .\Add-ADGroupMembership.ps1 -User1 jdoe -User2 jsmith
@@ -30,7 +33,8 @@ param(
     [string]$User1,
     [string]$User2,
     [string]$CsvFile,
-    [switch]$WhatIf
+    [switch]$WhatIf,
+    [string]$LogFile
 )
 
 # Robustly resolve the script's directory.
@@ -43,6 +47,7 @@ function Get-ScriptDirectory {
 
 # Default
 if (-not $CsvFile) { $CsvFile = Join-Path (Get-ScriptDirectory) "users.csv" }
+if (-not $LogFile) { $LogFile = Join-Path (Get-ScriptDirectory) "Add-GroupLog.csv" }
 
 # If users not given directly, read from the CSV file
 if (-not $User1 -or -not $User2) {
@@ -84,14 +89,39 @@ if ($WhatIf) {
 # Add each missing group to the target user
 $addedCount = 0
 foreach ($group in $groupsToAdd) {
+    $entry = [PSCustomObject]@{
+        Timestamp  = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        SourceUser = $User1
+        TargetUser = $User2
+        Group      = $group
+        Status     = "Added"
+        Details    = ""
+    }
     try {
         Add-ADGroupMember -Identity $group -Members $User2 -ErrorAction Stop
         Write-Host "  Added $User2 to: $group" -ForegroundColor Green
+        $entry.Status = "Added"
         $addedCount++
     }
     catch {
         Write-Warning "  Failed to add $User2 to $group : $($_.Exception.Message)"
+        $entry.Status = "Failed"
+        $entry.Details = $_.Exception.Message
     }
+    $entry | Export-Csv -Path $LogFile -Append -NoTypeInformation
+}
+
+# Log any groups the target already had (skipped)
+foreach ($group in ($sourceGroups | Where-Object { $targetGroups -contains $_ })) {
+    [PSCustomObject]@{
+        Timestamp  = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        SourceUser = $User1
+        TargetUser = $User2
+        Group      = $group
+        Status     = "Skipped"
+        Details    = "Already a member"
+    } | Export-Csv -Path $LogFile -Append -NoTypeInformation
 }
 
 Write-Host "`nDone. Added $addedCount of $($groupsToAdd.Count) groups to $User2." -ForegroundColor Cyan
+Write-Host "Log written to: $LogFile" -ForegroundColor Cyan
