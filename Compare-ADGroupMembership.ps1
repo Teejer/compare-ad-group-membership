@@ -88,11 +88,15 @@ $results | Export-Csv -Path $OutputPath -NoTypeInformation
 Write-Host "CSV exported to: $OutputPath" -ForegroundColor Cyan
 
 # Display results
-Write-Host "`n=== Groups only in $User1 ($(($onlyIn1).Count)) ===" -ForegroundColor Yellow
+$onlyIn1Count = ($onlyIn1 | Measure-Object).Count
+$onlyIn2Count = ($onlyIn2 | Measure-Object).Count
+$inBothCount  = ($inBoth  | Measure-Object).Count
+
+Write-Host "`n=== Groups only in $User1 ($onlyIn1Count) ===" -ForegroundColor Yellow
 $onlyIn1 | ForEach-Object { Write-Host "  $_" }
 
-Write-Host "`n=== Groups only in $User2 ($(($onlyIn2).Count)) ===" -ForegroundColor Yellow
+Write-Host "`n=== Groups only in $User2 ($onlyIn2Count) ===" -ForegroundColor Yellow
 $onlyIn2 | ForEach-Object { Write-Host "  $_" }
 
-Write-Host "`n=== Shared groups ($(($inBoth).Count)) ===" -ForegroundColor Green
+Write-Host "`n=== Shared groups ($inBothCount) ===" -ForegroundColor Green
 $inBoth | ForEach-Object { Write-Host "  $_" }
